@@ -1,0 +1,3 @@
+{
+  "functions": { "api/results.js": { "maxDuration": 60, "memory": 1769 } }
+}

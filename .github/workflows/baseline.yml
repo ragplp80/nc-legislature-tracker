@@ -1,0 +1,22 @@
+name: Build baseline
+on:
+  workflow_dispatch:
+  push:
+    paths: ["tools/build-baseline.mjs", "parse.js", ".github/workflows/baseline.yml"]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+      - run: node tools/build-baseline.mjs
+      - name: Commit baseline
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/baseline.json data/baseline-report.txt
+          git diff --cached --quiet || (git commit -m "Rebuild baseline from NCSBE 2022/2024 results" && git pull --rebase && git push)

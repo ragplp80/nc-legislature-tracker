@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NC Legislature">
+<meta name="theme-color" content="#0E1116">
+<title>NC Legislature — Election Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0E1116;--card:#161B24;--line:#232A36;--chip:#1C222D;--track:#1F2632;--text:#E8EAED;--soft:#C9CED6;--mute:#A3ABB8;--faint:#8C95A3;
+--d:#8DB8FF;--dDim:#3D5F99;--r:#FF8A73;--rDim:#8F3A2C;--gold:#F5D37A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Archivo,system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
+a{color:#9CC2FF}a:hover{color:#C9DDFF}
+.wrap{max-width:1280px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 20px) 24px 40px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.kicker{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:600}
+h1{margin:2px 0 0;font-size:28px;font-weight:800;font-stretch:85%}
+.status{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status .txt{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.status .big{font-size:15px;font-weight:600}.status .small{font-size:13px;color:var(--mute)}
+.badge{font-size:12px;font-weight:700;letter-spacing:.1em;padding:6px 10px;border-radius:6px;background:#3A2F12;color:var(--gold)}
+.badge.err{background:#4A2620;color:#FFC2B5}
+button{font:inherit;color:inherit}
+.iconbtn{width:44px;height:44px;border-radius:10px;border:1px solid #2A3140;background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.iconbtn.spin svg{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.tabs{display:flex;gap:8px}
+.tab{min-height:44px;padding:0 18px;border-radius:10px;border:1px solid #2A3140;background:var(--card);color:var(--soft);font-weight:600;cursor:pointer}
+.tab[aria-selected=true]{border-color:var(--d);background:#1E2A40;color:var(--text)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(460px,100%),1fr));gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.cardhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+h2{margin:0;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700}
+.note{font-size:13px;color:var(--mute)}
+.verdict{font-size:30px;font-weight:800;font-stretch:88%;line-height:1.1}
+.tone-R{color:var(--r)}.tone-D{color:var(--d)}.tone-close{color:var(--gold)}.tone-wait{color:var(--soft)}
+.sub{font-size:16px;color:var(--soft)}
+.bar{position:relative;height:34px;border-radius:8px;overflow:hidden;display:flex;background:var(--track)}
+.bar>i{display:block;height:100%}
+.bar .maj{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;background:#fff}
+.bar .sup{position:absolute;top:0;bottom:0;border-left:2px dashed var(--bg)}
+.barlabels{position:relative;height:18px;font-size:12px;color:var(--mute)}
+.barlabels span{position:absolute;white-space:nowrap}
+.counts{display:flex;justify-content:space-between;font-size:13px;color:var(--soft);gap:12px;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{flex:1 1 140px;background:var(--chip);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.chip .k{font-size:12px;color:var(--mute)}.chip .v{font-size:18px;font-weight:700}
+.swingrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px}
+.swingbig{font-size:44px;font-weight:800;font-stretch:85%}
+.gauge{position:relative;height:100px;margin:0 8px}
+.gauge .track{position:absolute;left:0;right:0;top:40px;height:14px;border-radius:7px;background:var(--track)}
+.gauge .fill{position:absolute;top:40px;height:14px;background:var(--dDim)}
+.gauge .fill.r{background:var(--rDim)}
+.gauge .mk{position:absolute;top:32px;height:30px;border-left:2px dashed var(--d)}
+.gauge .mk.r{border-color:var(--r)}.gauge .mk.zero{border-left:2px solid #6B7584}
+.gauge .now{position:absolute;top:26px;height:42px;width:4px;margin-left:-2px;background:#fff;border-radius:2px}
+.gauge .lab{position:absolute;font-size:12px;white-space:nowrap;transform:translateX(-50%)}
+.methods{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.tip{background:var(--chip);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.tip .top{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);gap:8px}
+.tip .name{font-size:20px;font-weight:700}
+.tip .cand{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tablebox{overflow-x:auto}
+table{width:100%;min-width:820px;border-collapse:collapse;font-size:15px}
+th{text-align:left;color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:8px 10px}
+td{padding:11px 10px;border-top:1px solid var(--line)}
+td.num,th.num{text-align:right}
+tr.tipping td{background:#1E2533}
+tr.line td{padding:0;border:0}
+.ctl{display:flex;align-items:center;gap:10px;padding:6px 0}.ctl i{flex:1;height:3px;background:#fff}
+.ctl span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.pbar{display:flex;align-items:center;gap:8px}.pbar>div{flex:1;height:6px;border-radius:3px;background:var(--track)}.pbar>div>i{display:block;height:6px;border-radius:3px;background:#6B7584}
+.pill{font-size:13px;font-weight:700;padding:4px 8px;border-radius:6px;white-space:nowrap}
+.p-Dcalled{background:var(--d);color:var(--bg)}.p-D{background:#2A3D5E;color:#C9DDFF}
+.p-Rcalled{background:var(--r);color:var(--bg)}.p-R{background:#4A2620;color:#FFC2B5}
+.p-toss{background:#3A2F12;color:var(--gold)}
+.cname{font-weight:400;color:var(--mute);font-size:13px}
+.tag{font-size:12px;font-weight:700;color:var(--gold);margin-left:6px}
+.foot{margin:0;font-size:12px;color:var(--faint);line-height:1.5}
+.empty{color:var(--mute);font-size:14px;padding:6px 0}
+[hidden]{display:none!important}
+@media (max-width:600px){.barlabels{height:34px}.barlabels span.supl{top:16px}.wrap{padding:calc(env(safe-area-inset-top) + 14px) 14px 32px}.verdict{font-size:24px}.swingbig{font-size:38px}h1{font-size:22px}.status .txt{align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <div class="kicker">NC General Assembly · Election Night</div>
+    <h1>Can Democrats take a chamber?</h1>
+  </div>
+  <div class="status">
+    <span id="mode" class="badge" hidden></span>
+    <div class="txt"><span class="big" id="pct">Loading…</span><span class="small" id="upd"></span></div>
+    <button class="iconbtn" id="refresh" type="button" aria-label="Refresh now">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+    </button>
+  </div>
+</header>
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" id="t-over" aria-selected="true" type="button">Overview</button>
+  <button class="tab" role="tab" id="t-board" aria-selected="false" type="button">Battlegrounds</button>
+</div>
+
+<main id="over">
+  <div class="grid2" id="chambers"></div>
+  <section class="card" id="swing" style="margin-top:18px"></section>
+  <section class="card" id="tips" style="margin-top:18px"></section>
+</main>
+<main id="board" hidden></main>
+
+<p class="foot">Projection: every precinct and vote type (early, mail, Election Day, provisional) is compared with the same place and vote type in 2024. The average swing, blended with each district's own trend, is applied to votes not yet counted. "Called" means the leader is ahead by more than what's left plus a 25% cushion. These are this page's own estimates, not media calls. Results: NC State Board of Elections, unofficial.</p>
+</div>
+
+<script>
+const REFRESH = 60;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const mg = (m) => (m == null ? "—" : m === 0 ? "Even" : (m > 0 ? "D +" : "R +") + Math.abs(m).toFixed(1));
+const mcls = (m) => (m == null ? "" : m >= 0 ? "tone-D" : "tone-R");
+const pctTxt = (x) => (x == null ? "—" : (x >= 1 ? "+" : "") + Math.round((x - 1) * 100) + "%");
+const METHOD = { EV: "Early vote", MAIL: "Mail", ED: "Election Day", PROV: "Provisional" };
+let data = null, next = REFRESH, busy = false, view = location.hash === "#board" ? "board" : "over";
+
+const params = new URLSearchParams(location.search);
+const api = "/api/results" + (["replay", "pct", "shift", "seed"].some((k) => params.has(k)) ? "?" + ["replay", "pct", "shift", "seed"].filter((k) => params.has(k)).map((k) => k + "=" + encodeURIComponent(params.get(k))).join("&") : "");
+
+async function load() {
+  if (busy) return;
+  busy = true; $("refresh").classList.add("spin");
+  try {
+    const r = await fetch(api, { cache: "no-store" });
+    const j = await r.json();
+    if (!r.ok || j.error) throw new Error(j.error || "HTTP " + r.status);
+    data = j; render(); $("mode").hidden = !j.mode; $("mode").className = "badge"; $("mode").textContent = j.mode || "";
+  } catch (e) {
+    $("mode").hidden = false; $("mode").className = "badge err"; $("mode").textContent = "Couldn't update — retrying";
+    console.error(e);
+  } finally { busy = false; next = REFRESH; $("refresh").classList.remove("spin"); }
+}
+
+function render() {
+  const d = data;
+  $("pct").textContent = d.pctIn > 0 ? `${d.pctIn}% of expected vote counted` : "No results yet";
+  tick();
+  $("chambers").innerHTML = ["H", "S"].map((ch) => chamberCard(d.chambers[ch])).join("");
+  $("swing").innerHTML = swingCard(d);
+  $("tips").innerHTML = tipsCard(d);
+  $("board").innerHTML = ["S", "H"].map((ch) => boardCard(d.chambers[ch], d)).join("");
+}
+
+function seatBar(c) {
+  const n = c.seats, w = (x) => (x / n) * 100;
+  const projD = c.D - c.calledD, projR = c.R - c.calledR;
+  const sup = w(n - c.gopSuper);
+  return `<div class="bar" role="img" aria-label="${c.D} Democratic, ${c.R} Republican seats projected">
+    <i style="width:${w(c.calledD)}%;background:var(--d)"></i><i style="width:${w(projD)}%;background:var(--dDim)"></i>
+    <i style="width:${w(projR)}%;background:var(--rDim)"></i><i style="width:${w(c.calledR)}%;background:var(--r)"></i>
+    <div class="maj" style="left:${w(c.demControl) - w(0.5)}%"></div><div class="sup" style="left:${sup}%"></div></div>
+    <div class="barlabels"><span style="left:${w(c.demControl) - w(0.5)}%;transform:translateX(-50%);color:var(--text);font-weight:700">▲ ${c.demControl} for control</span>
+    <span class="supl" style="left:${sup}%;transform:translateX(-100%);padding-right:6px">GOP veto-proof ${c.gopSuper} ┆</span></div>`;
+}
+
+function chamberCard(c) {
+  const short = c.demControl - c.D;
+  const gap = short > 0 ? `Democrats ${short} short` : `Democrats ${-short + 1} over the line`;
+  const sup = c.gopSuperHeld ? `<span class="tone-R">GOP keeps it</span>` : c.R >= c.gopSuper - 2 ? `<span class="tone-close">Within ${c.gopSuper - c.R} seat${c.gopSuper - c.R === 1 ? "" : "s"}</span>` : `Out of reach`;
+  return `<section class="card">
+    <div class="cardhead"><h2>${esc(c.name)} · ${c.seats} seats</h2><span class="note">Dems need ${c.demControl}${c.name.includes("Senate") ? " (Lt. Gov. breaks ties)" : ""}</span></div>
+    <div><div class="verdict tone-${c.verdict.tone}">${esc(c.verdict.text)}</div>
+    <div class="sub">Projected <strong class="tone-R">R ${c.R}</strong> – <strong class="tone-D">D ${c.D}</strong> · ${gap} · range D ${c.range[0]}–${c.range[1]}</div></div>
+    <div>${seatBar(c)}
+    <div class="counts"><span><strong class="tone-D">${c.calledD}</strong> called + <strong class="tone-D">${c.D - c.calledD}</strong> projected D</span>
+    <span><strong class="tone-R">${c.R - c.calledR}</strong> projected + <strong class="tone-R">${c.calledR}</strong> called R</span></div></div>
+    <div class="chips">
+      <div class="chip"><span class="k">Net change vs 2024</span><span class="v ${c.net > 0 ? "tone-D" : c.net < 0 ? "tone-R" : ""}">${c.net > 0 ? "D +" + c.net : c.net < 0 ? "R +" + -c.net : "No change"}</span></div>
+      <div class="chip"><span class="k">Flips at a swing of</span><span class="v">${c.swingToFlip == null ? "—" : mg(c.swingToFlip)}</span></div>
+      <div class="chip"><span class="k">GOP veto-proof (${c.gopSuper})</span><span class="v" style="color:var(--soft)">${sup}</span></div>
+    </div></section>`;
+}
+
+function swingCard(d) {
+  const s = d.swing.vs2024, H = d.chambers.H, S = d.chambers.S;
+  const pts = [0, s ?? 0, H.swingToFlip, S.swingToFlip, H.gopSuperBelow].filter((x) => x != null);
+  const lo = Math.floor(Math.min(-6, ...pts) - 2), hi = Math.ceil(Math.max(12, ...pts) + 2);
+  const x = (v) => ((v - lo) / (hi - lo)) * 100;
+  const mk = (v, cls, label, top) => v == null ? "" : `<div class="mk ${cls}" style="left:${x(v)}%"></div><span class="lab ${cls === "r" ? "tone-R" : "tone-D"}" style="left:${x(v)}%;top:${top}px">${label}</span>`;
+  const togo = (v) => (v == null || s == null ? "" : v - s > 0 ? ` (${(v - s).toFixed(1)} to go)` : " (past it)");
+  return `<div class="cardhead"><h2>Swing vs 2024 — the number to watch</h2><span class="note">Same precincts, same vote type</span></div>
+    <div class="swingrow"><span class="swingbig ${mcls(s)}">${s == null ? "—" : mg(s)}</span>
+    <span class="sub">vs 2022: <strong class="${mcls(d.swing.vs2022)}">${mg(d.swing.vs2022)}</strong></span>
+    <span class="sub">Senate flips at <strong>${mg(S.swingToFlip)}</strong>${togo(S.swingToFlip)} · House at <strong>${mg(H.swingToFlip)}</strong>${togo(H.swingToFlip)}</span></div>
+    <div class="gauge" role="img" aria-label="Swing gauge">
+      <div class="track"></div>
+      ${s != null ? `<div class="fill ${s < 0 ? "r" : ""}" style="left:${Math.min(x(0), x(s))}%;width:${Math.abs(x(s) - x(0))}%"></div>` : ""}
+      <div class="mk zero" style="left:${x(0)}%"></div><span class="lab" style="left:${x(0)}%;top:66px;color:var(--mute)">2024</span>
+      ${mk(H.gopSuperBelow, "r", "GOP House veto-proof", 8)}
+      ${mk(S.swingToFlip, "", "Senate flips", 8)}
+      ${mk(H.swingToFlip, "", "House flips", 66)}
+      ${s != null ? `<div class="now" style="left:${x(s)}%"></div><span class="lab" style="left:${x(s)}%;top:74px;font-weight:700;font-size:13px">Now</span>` : ""}
+      <span class="lab" style="left:0;transform:none;top:84px;color:var(--mute)">${mg(lo)}</span><span class="lab" style="left:auto;right:0;transform:none;top:84px;color:var(--mute)">${mg(hi)}</span>
+    </div>
+    <div class="methods">${d.byMethod.filter((m) => m.method !== "PROV").map((m) => `<div class="chip">
+      <span class="k">${METHOD[m.method]}</span>
+      <span class="v ${mcls(m.vs2024)}">${mg(m.vs2024)} <span style="font-size:13px;color:var(--mute);font-weight:500">vs ’24</span></span>
+      <span class="k">vs ’22 <strong class="${mcls(m.vs2022)}">${mg(m.vs2022)}</strong> · turnout ${pctTxt(m.turnout22)} vs ’22, ${pctTxt(m.turnout24)} vs ’24</span></div>`).join("")}</div>`;
+}
+
+function candLine(r) {
+  const c = r.cands || {};
+  return [c.DEM && "D " + c.DEM, c.REP && "R " + c.REP].filter(Boolean).map(esc).join(" · ");
+}
+
+function tipsCard(d) {
+  const tips = [];
+  for (const ch of ["S", "H"]) {
+    const c = d.chambers[ch];
+    const rows = flipRows(c);
+    const need = c.flipsNeeded;
+    [need - 1, need].forEach((i) => { const r = rows[i - 1]; if (r) tips.push({ r, label: `${ch === "H" ? "House" : "Senate"} · Dems' ${ordinal(i)} flip` }); });
+    const risk = c.races.filter((r) => r.held === "D").sort((a, b) => a.proj - b.proj)[0];
+    if (risk && risk.proj < 6) tips.push({ r: risk, label: `${ch === "H" ? "House" : "Senate"} · Dem seat at risk` });
+  }
+  return `<div class="cardhead"><h2>Tipping seats — where control is decided</h2><a href="#board" id="toBoard" style="font-size:14px;font-weight:600;padding:10px 4px">All battlegrounds →</a></div>
+  <div class="tips">${tips.map(({ r, label }) => `<div class="tip"><div class="top"><span>${label}</span><span>${r.pctIn}% in</span></div>
+    <div class="name">${r.id.replace(/^([HS])/, "$1D ")}</div>
+    <div style="font-size:14px;color:var(--soft)"><strong class="${mcls(r.now ?? r.proj)}">${r.now == null ? "No votes yet" : mg(r.now) + " now"}</strong> · proj ${mg(r.proj)} · was ${mg(r.m24)}</div>
+    <div class="cand">${candLine(r)}</div></div>`).join("") || `<div class="empty">No competitive seats yet.</div>`}</div>`;
+}
+
+const ordinal = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+const flipRows = (c) => c.races.filter((r) => r.held === "R").sort((a, b) => b.proj - a.proj);
+
+function pill(r) {
+  const who = r.winner, flip = r.flip ? (who === "D" ? "D flip" : "R flip") : who === "D" ? "D hold" : "R hold";
+  if (r.status === "called") return `<span class="pill p-${who}called">${flip} · called</span>`;
+  if (r.status === "tossup") return `<span class="pill p-toss">Toss-up · ${who} lean</span>`;
+  return `<span class="pill p-${who}">${flip} · ${r.status}</span>`;
+}
+
+function row(r, i, tip) {
+  return `<tr class="${tip ? "tipping" : ""}"><td style="color:var(--mute)">${i}</td>
+    <td><strong>${r.id.replace(/^([HS])/, "$1D ")}</strong>${tip ? `<span class="tag">TIPPING SEAT</span>` : ""}<div class="cname">${candLine(r)}</div></td>
+    <td class="num ${mcls(r.m24)}">${mg(r.m24)}</td><td class="num ${mcls(r.now)}" style="font-weight:700">${mg(r.now)}</td>
+    <td class="num">${mg(r.localSwing)}</td><td class="num ${mcls(r.proj)}">${mg(r.proj)}</td>
+    <td><div class="pbar"><div><i style="width:${r.pctIn}%"></i></div><span style="font-size:13px;color:var(--mute)">${r.pctIn}%</span></div></td>
+    <td>${pill(r)}</td></tr>`;
+}
+
+function boardCard(c) {
+  const rows = flipRows(c), need = c.flipsNeeded;
+  const proj = rows.filter((r) => r.winner === "D").length;
+  const defend = c.races.filter((r) => r.held === "D").sort((a, b) => a.proj - b.proj);
+  let body = "";
+  rows.forEach((r, k) => {
+    if (k === need) body += `<tr class="line"><td colspan="8"><div class="ctl"><i></i><span>Control line — Dems need every seat above</span><i></i></div></td></tr>`;
+    body += row(r, k + 1, k === need - 1);
+  });
+  return `<section class="card" style="margin-bottom:18px">
+    <div class="cardhead"><h2 style="font-size:18px;letter-spacing:0;text-transform:none;color:var(--text);font-weight:800">${esc(c.name)}
+      <span style="font-weight:500;color:var(--mute);font-size:15px">· Dems need ${need} flip${need === 1 ? "" : "s"} · projected ${proj}</span></h2>
+      <span class="note">Republican-held seats, most Democratic first</span></div>
+    ${rows.length ? `<div class="tablebox"><table><thead><tr><th>#</th><th>District</th><th class="num">2024</th><th class="num">Now</th><th class="num">Swing</th><th class="num">Projected</th><th style="width:160px">Counted</th><th>Call</th></tr></thead><tbody>${body}</tbody></table></div>` : `<div class="empty">No competitive Republican seats.</div>`}
+    <div class="note">Dem-held to defend: ${defend.length ? defend.slice(0, 6).map((r) => `${r.id.replace(/^([HS])/, "$1D ")} <strong class="${mcls(r.now ?? r.proj)}">${mg(r.now ?? r.proj)}</strong> (${r.pctIn}% in)`).join(" · ") : "none close"}</div>
+  </section>`;
+}
+
+function tick() {
+  if (!data) return;
+  const t = data.updated ? new Date(data.updated).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—";
+  $("upd").textContent = `State data ${t} · next check in 0:${String(next).padStart(2, "0")}`;
+}
+function show(v) {
+  view = v;
+  $("over").hidden = v !== "over"; $("board").hidden = v !== "board";
+  $("t-over").setAttribute("aria-selected", v === "over"); $("t-board").setAttribute("aria-selected", v === "board");
+  history.replaceState(null, "", location.pathname + location.search + (v === "board" ? "#board" : ""));
+}
+$("t-over").onclick = () => show("over");
+$("t-board").onclick = () => show("board");
+document.addEventListener("click", (e) => { if (e.target.id === "toBoard") { e.preventDefault(); show("board"); scrollTo(0, 0); } });
+$("refresh").onclick = load;
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+setInterval(() => { next--; if (next <= 0) load(); else tick(); }, 1000);
+show(view);
+load();
+</script>
+</body>
+</html>

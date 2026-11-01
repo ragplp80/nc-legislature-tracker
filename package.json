@@ -1,0 +1,8 @@
+{
+  "name": "nc-legislature-tracker",
+  "private": true,
+  "description": "NC General Assembly election night tracker",
+  "scripts": { "test": "node --test tests/" },
+  "dependencies": { "fflate": "^0.8.2" },
+  "engines": { "node": ">=20" }
+}
