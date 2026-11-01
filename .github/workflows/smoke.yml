@@ -1,0 +1,14 @@
+name: Check live site
+on:
+  workflow_dispatch:
+  push:
+    paths: ["tools/smoke.mjs", ".github/workflows/smoke.yml"]
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - run: sleep 60  # let Vercel finish deploying the same push
+      - run: node tools/smoke.mjs
