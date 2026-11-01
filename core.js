@@ -1,15 +1,17 @@
 // NC General Assembly tracker: the projection math. Pure functions, no network.
 //
 // Words used here:
-//   unit     one reporting place for one vote type and one chamber, keyed "COUNTY|PRECINCT|METHOD|CH"
-//            (METHOD is ED, EV, MAIL or PROV; CH is H or S). Precincts sit in one district per chamber.
+//   unit     one reporting place for one vote type and one district, keyed "COUNTY|PRECINCT|METHOD|DIST"
+//            (METHOD is ED, EV, MAIL or PROV; DIST like H32 or S11). Votes the State Board files under
+//            stand-in precincts (early-voting sites, ABSENTEE...) are pooled per county as PRECINCT "~".
 //   share    Democratic share of the two-party vote, 0..1
 //   swing    change in the Democratic margin, in points (D+4 = Democrats 4 points better on margin)
 //
 // Baseline (built once from the State Board's 2022 and 2024 files, see tools/build-baseline.mjs):
 //   { districts: { H32: { ch, n, held, m24, p24 } },  units: { key: { dist, b24:[d,r], leg24:bool, b22:[d,r]|null } } }
 //   b24 is the 2024 legislative race in that unit, or the 2024 presidential race where the
-//   legislative race had no opponent (leg24 false). b22 is the 2022 race for the same chamber.
+//   legislative race had no opponent (leg24 false). b22 is the 2022 race for the same chamber in
+//   that precinct. pool22 holds 2022 pooled votes by "COUNTY|METHOD|CH" (2022 had other districts).
 // Live (parsed from the 2026 file, see parse.js):
 //   { units: { key: { dist, d, r, o } }, districts: { H32: { parties: ["DEM","REP"], cands: {DEM:"..", REP:".."} } } }
 
@@ -23,7 +25,6 @@ const DEFAULT_TURNOUT = 0.8; // 2026 votes per 2024 vote before any results exis
 
 const share = (d, r) => (d + r > 0 ? d / (d + r) : null);
 const methodOf = (key) => key.split("|")[2];
-const chOf = (key) => key.split("|")[3];
 const round1 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10) / 10);
 
 // Average swing and turnout across units counted in 2026 that can be compared with the same
@@ -47,6 +48,26 @@ function compare(live, base, year) {
       if (s0 != null && s1 != null && u.d > 0 && u.r > 0 && bd > 0 && br > 0 && (year === 2022 || b.leg24)) {
         a.w += u.d + u.r;
         a.sw += (u.d + u.r) * (s1 - s0) * 200;
+      }
+    }
+  }
+  // 2022 pooled votes: compare county by county, since the 2022 districts were different.
+  if (year === 2022 && base.pool22) {
+    const pools = {};
+    for (const [key, u] of Object.entries(live.units)) {
+      const [county, precinct, method] = key.split("|");
+      if (precinct !== "~" || !(u.d > 0 && u.r > 0)) continue;
+      const k = `${county}|${method}|${u.dist[0]}`;
+      const p = (pools[k] ||= [0, 0]);
+      p[0] += u.d; p[1] += u.r;
+    }
+    for (const [k, [d, r]] of Object.entries(pools)) {
+      const b = base.pool22[k];
+      if (!b || !(b[0] > 0 && b[1] > 0)) continue;
+      const m = k.split("|")[1];
+      for (const a of [acc.all, acc[m]]) {
+        a.turnNow += d + r; a.turnThen += b[0] + b[1];
+        a.w += d + r; a.sw += (d + r) * (share(d, r) - share(b[0], b[1])) * 200;
       }
     }
   }

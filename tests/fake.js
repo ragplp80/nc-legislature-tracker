@@ -20,7 +20,7 @@ function makeBase(seed = 1) {
           const us = Math.min(0.95, Math.max(0.05, s + LEAN[m] + (rand() - 0.5) * 0.1));
           const d = Math.round(votes * us), r = votes - d;
           D += d; R += r;
-          units[`C${n % 9}|${ch}${n}-P${p}|${m}|${ch}`] = { dist: id, b24: [d, r], leg24: true, b22: [Math.round(d * 0.7), Math.round(r * 0.75)] };
+          units[`C${n % 9}|${ch}${n}-P${p}|${m}|${id}`] = { dist: id, b24: [d, r], leg24: true, b22: [Math.round(d * 0.7), Math.round(r * 0.75)] };
         }
       }
       districts[id] = { ch, n, held: D > R ? "D" : "R", m24: ((D - R) / (D + R)) * 100 };

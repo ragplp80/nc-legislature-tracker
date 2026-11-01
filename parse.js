@@ -52,7 +52,11 @@ const isPresident = (c) => /^US PRESIDENT/.test(c);
 const isUSSenate = (c) => /^US SENATE/.test(c);
 const sideOf = (party) => (party === "DEM" ? "d" : party === "REP" ? "r" : "o");
 const METHODS = ["ED", "EV", "MAIL", "PROV"];
-const unitKey = (county, precinct, method, ch) => `${county}|${precinct}|${method}|${ch}`;
+// Real precincts are one unit per vote type and district. Votes the State Board files under
+// stand-in "precincts" (early-voting sites, ABSENTEE, PROVISIONAL, TRANSFER) are pooled per county,
+// vote type and district as "~": site names change between elections, the county pool doesn't.
+const POOL = "~";
+const unitKey = (county, precinct, method, dist) => `${county}|${precinct}|${method}|${dist}`;
 
 // Legislative races from a results file, by unit and by district.
 function legislative(rows) {
@@ -60,13 +64,12 @@ function legislative(rows) {
   for (const row of rows) {
     const dist = districtOf(row.contest);
     if (!dist) continue;
-    const ch = dist[0];
     const dd = (districts[dist] ||= { parties: [], cands: {}, votes: { d: 0, r: 0, o: 0 } });
     if (row.party && !dd.parties.includes(row.party)) dd.parties.push(row.party);
     if (row.party === "DEM" || row.party === "REP") dd.cands[row.party] ||= titleCase(row.choice);
     const side = sideOf(row.party);
     for (const m of METHODS) {
-      const key = unitKey(row.county, row.precinct, m, ch);
+      const key = unitKey(row.county, row.real ? row.precinct : POOL, m, dist);
       const u = (units[key] ||= { dist, d: 0, r: 0, o: 0, real: row.real });
       u[side] += row[m];
       dd.votes[side] += row[m];
@@ -95,4 +98,4 @@ function titleCase(s) {
   return String(s).toLowerCase().replace(/(^|[\s\-'(])([a-z])/g, (_, a, b) => a + b.toUpperCase()).replace(/\bIi\b/g, "II").replace(/\bIii\b/g, "III");
 }
 
-module.exports = { parseTsv, legislative, statewide, districtOf, isPresident, isUSSenate, METHODS, unitKey };
+module.exports = { parseTsv, legislative, statewide, districtOf, isPresident, isUSSenate, METHODS, unitKey, POOL };

@@ -28,10 +28,22 @@ for (const [id, d] of Object.entries(L24.districts)) {
   const held = contested(d) ? (v.d > v.r ? "D" : "R") : d.parties.includes("DEM") ? "D" : "R";
   districts[id] = { ch: id[0], n: +id.slice(1), held, m24: contested(d) ? round(((v.d - v.r) / (v.d + v.r)) * 100) : null, p24: null, cands24: d.cands };
 }
+// 2022 votes by precinct and chamber (2022 used other district lines, so precincts are matched by
+// name, not district). Pooled early/mail votes are compared county by county, see pool22.
+const old22 = {}, pool22 = {};
+for (const [key, u] of Object.entries(L22.units)) {
+  if (!contested(L22.districts[u.dist])) continue;
+  const [county, precinct, method] = key.split("|");
+  const ch = u.dist[0];
+  const k = u.real ? `${county}|${precinct}|${method}|${ch}` : `${county}|${method}|${ch}`;
+  const t = u.real ? old22 : pool22;
+  const a = (t[k] ||= [0, 0, 0]);
+  a[0] += u.d; a[1] += u.r; a[2]++;
+}
 const presDist = {};
 let n22 = 0, n22ok = 0;
 for (const [key, u] of Object.entries(L24.units)) {
-  const [county, precinct, method, ch] = key.split("|");
+  const [county, precinct, method] = key.split("|");
   const leg = contested(L24.districts[u.dist]);
   const p = pres[`${county}|${precinct}|${method}`];
   if (u.real && p) { const pd = (presDist[u.dist] ||= { d: 0, r: 0 }); pd.d += p.d; pd.r += p.r; }
@@ -39,10 +51,12 @@ for (const [key, u] of Object.entries(L24.units)) {
   if (leg) b24 = [u.d, u.r];
   else if (u.real && p) b24 = [p.d, p.r];
   if (!b24 || b24[0] + b24[1] === 0) continue;
-  const old = L22.units[key];
   let b22 = null;
-  n22++;
-  if (old && contested(L22.districts[old.dist]) && old.d + old.r > 0) { b22 = [old.d, old.r]; n22ok++; }
+  if (u.real) {
+    n22++;
+    const old = old22[`${county}|${precinct}|${method}|${u.dist[0]}`];
+    if (old && old[2] === 1 && old[0] + old[1] > 0) { b22 = [old[0], old[1]]; n22ok++; }
+  }
   units[key] = { dist: u.dist, b24, leg24: leg, ...(b22 ? { b22 } : {}) };
 }
 for (const [id, p] of Object.entries(presDist)) if (districts[id]) districts[id].p24 = round(((p.d - p.r) / (p.d + p.r)) * 100);
@@ -52,12 +66,11 @@ const report = [
   `2024 rows ${r24.length}, 2022 rows ${r22.length}`,
   `districts ${Object.keys(districts).length} · House ${tally("H")} · Senate ${tally("S")}`,
   `uncontested in 2024: ${Object.entries(L24.districts).filter(([, d]) => !contested(d)).map(([id]) => id).join(" ")}`,
-  `units ${Object.keys(units).length} · with a 2022 match ${n22ok} of ${n22} (${round((n22ok / n22) * 100)}%)`,
+  `units ${Object.keys(units).length} (pooled ${Object.keys(units).filter((k) => k.includes("|~|")).length}) · precinct units with a 2022 match ${n22ok} of ${n22} (${round((n22ok / n22) * 100)}%) · 2022 county pools ${Object.keys(pool22).length}`,
   `by method: ` + P.METHODS.map((m) => m + " " + Object.keys(units).filter((k) => k.split("|")[2] === m).length).join(", "),
-  `non-real precinct labels: ` + [...new Set(Object.entries(L24.units).filter(([, u]) => !u.real).map(([k]) => k.split("|")[1]))].slice(0, 30).join(", "),
 ];
 console.log(report.join("\n"));
 fs.mkdirSync("data", { recursive: true });
-fs.writeFileSync("data/baseline.json", JSON.stringify({ built: new Date().toISOString(), sources: FILES, report, districts, units }));
+fs.writeFileSync("data/baseline.json", JSON.stringify({ built: new Date().toISOString(), sources: FILES, report, districts, units, pool22: Object.fromEntries(Object.entries(pool22).map(([k, v]) => [k, [v[0], v[1]]])) }));
 fs.writeFileSync("data/baseline-report.txt", report.join("\n") + "\n");
 function round(x) { return Math.round(x * 10) / 10; }
