@@ -114,7 +114,7 @@ tr.line td{padding:0;border:0}
 </main>
 <main id="board" hidden></main>
 
-<p class="foot">Projection: every precinct and vote type (early, mail, Election Day, provisional) is compared with the same place and vote type in 2024. The average swing, blended with each district's own trend, is applied to votes not yet counted. "Called" means the leader is ahead by more than what's left plus a 25% cushion. These are this page's own estimates, not media calls. Results: NC State Board of Elections, unofficial.</p>
+<p class="foot">Projection: every precinct and vote type (early, mail, Election Day, provisional) is compared with the same place and vote type in 2024; early-voting sites are pooled by county. 2022 is compared whole county against whole county once a county finishes, because districts and voting habits have changed since. The average swing, blended with each district's own trend, is applied to votes not yet counted. "Called" means the leader is ahead by more than what's left plus a 25% cushion. These are this page's own estimates, not media calls. Results: NC State Board of Elections, unofficial.</p>
 </div>
 
 <script>
@@ -193,7 +193,7 @@ function swingCard(d) {
   const togo = (v) => (v == null || s == null ? "" : v - s > 0 ? ` (${(v - s).toFixed(1)} to go)` : " (past it)");
   return `<div class="cardhead"><h2>Swing vs 2024 — the number to watch</h2><span class="note">Same precincts, same vote type</span></div>
     <div class="swingrow"><span class="swingbig ${mcls(s)}">${s == null ? "—" : mg(s)}</span>
-    <span class="sub">vs 2022: <strong class="${mcls(d.swing.vs2022)}">${mg(d.swing.vs2022)}</strong></span>
+    <span class="sub">vs 2022: <strong class="${mcls(d.swing.vs2022)}">${d.swing.vs2022 == null ? "after the first county finishes" : mg(d.swing.vs2022)}</strong>${d.swing.counties22 ? ` <span class="note">(${d.swing.counties22} of 100 counties done)</span>` : ""}</span>
     <span class="sub">Senate flips at <strong>${mg(S.swingToFlip)}</strong>${togo(S.swingToFlip)} · House at <strong>${mg(H.swingToFlip)}</strong>${togo(H.swingToFlip)}</span></div>
     <div class="gauge" role="img" aria-label="Swing gauge">
       <div class="track"></div>
@@ -208,7 +208,8 @@ function swingCard(d) {
     <div class="methods">${d.byMethod.filter((m) => m.method !== "PROV").map((m) => `<div class="chip">
       <span class="k">${METHOD[m.method]}</span>
       <span class="v ${mcls(m.vs2024)}">${mg(m.vs2024)} <span style="font-size:13px;color:var(--mute);font-weight:500">vs ’24</span></span>
-      <span class="k">vs ’22 <strong class="${mcls(m.vs2022)}">${mg(m.vs2022)}</strong> · turnout ${pctTxt(m.turnout22)} vs ’22, ${pctTxt(m.turnout24)} vs ’24</span></div>`).join("")}</div>`;
+      <span class="k">${m.turnout24 == null ? "Not reported yet" : `Turnout ${pctTxt(m.turnout24)} vs ’24 in the same places`}</span></div>`).join("")}
+      <div class="chip"><span class="k">Turnout, finished counties</span><span class="v">${pctTxt(d.turnout.vs2022)} <span style="font-size:13px;color:var(--mute);font-weight:500">vs ’22</span></span><span class="k">Legislative votes cast, all vote types</span></div></div>`;
 }
 
 function candLine(r) {

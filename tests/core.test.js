@@ -65,7 +65,7 @@ test("big swing flips both chambers and calls them", () => {
 test("uncontested seats go to the only party on the ballot", () => {
   const out = Core.summarize(makeLive(base, { contested: (id) => id !== "H120" }), base);
   const r = Core.projectAll(makeLive(base, { contested: (id) => id !== "H120" }), base,
-    Core.prepare(makeLive(base), base), 0, Core.compare(makeLive(base), base, 2024)).H120;
+    Core.prepare(makeLive(base), base), 0, Core.compare(makeLive(base), base)).H120;
   assert.equal(r.winner, "R");
   assert.equal(r.status, "uncontested");
   assert.ok(out.chambers.H.D <= 49);
@@ -75,6 +75,9 @@ test("2022 comparison and turnout are reported", () => {
   const out = Core.summarize(makeLive(base, { swing: 0, turn: 0.9 }), base);
   assert.ok(out.swing.vs2022 != null);
   assert.ok(Math.abs(out.turnout.vs2024 - 0.9) < 0.01);
-  const ed = out.byMethod.find((m) => m.method === "ED");
-  assert.ok(ed.turnout22 > 1);
+  assert.equal(out.swing.counties22, 9);
+  // 2022 is only compared for counties that have finished counting
+  const part = Core.summarize(makeLive(base, { reported: (k) => !k.includes("|ED|") }), base);
+  assert.equal(part.swing.counties22, 0);
+  assert.equal(part.swing.vs2022, null);
 });

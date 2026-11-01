@@ -26,7 +26,14 @@ function makeBase(seed = 1) {
       districts[id] = { ch, n, held: D > R ? "D" : "R", m24: ((D - R) / (D + R)) * 100 };
     }
   }
-  return { districts, units };
+  const county22 = {};
+  for (const [key, u] of Object.entries(units)) {
+    const k = key.split("|")[0] + "|" + u.dist[0];
+    const a = (county22[k] ||= [0, 0]);
+    a[0] += u.b22[0]; a[1] += u.b22[1];
+    delete u.b22;
+  }
+  return { districts, units, county22 };
 }
 
 // 2026 results: every unit swings by `swing` margin points, turnout `turn` x 2024.

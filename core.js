@@ -8,10 +8,10 @@
 //   swing    change in the Democratic margin, in points (D+4 = Democrats 4 points better on margin)
 //
 // Baseline (built once from the State Board's 2022 and 2024 files, see tools/build-baseline.mjs):
-//   { districts: { H32: { ch, n, held, m24, p24 } },  units: { key: { dist, b24:[d,r], leg24:bool, b22:[d,r]|null } } }
+//   { districts: { H32: { ch, n, held, m24, p24 } },  units: { key: { dist, b24:[d,r], leg24:bool } }, county22 }
 //   b24 is the 2024 legislative race in that unit, or the 2024 presidential race where the
-//   legislative race had no opponent (leg24 false). b22 is the 2022 race for the same chamber in
-//   that precinct. pool22 holds 2022 pooled votes by "COUNTY|METHOD|CH" (2022 had other districts).
+//   legislative race had no opponent (leg24 false). county22 holds 2022 legislative votes by
+//   "COUNTY|CH", all vote types together (2022 had other districts).
 // Live (parsed from the 2026 file, see parse.js):
 //   { units: { key: { dist, d, r, o } }, districts: { H32: { parties: ["DEM","REP"], cands: {DEM:"..", REP:".."} } } }
 
@@ -20,54 +20,31 @@ const CHAMBERS = {
   S: { name: "NC Senate", seats: 50, demControl: 25, gopSuper: 30 }, // Democratic Lt. Governor breaks a 25-25 tie
 };
 const METHODS = ["EV", "MAIL", "ED", "PROV"];
-const LOCAL_WEIGHT = 3000; // votes of a district's own reporting before its local swing outweighs the statewide one
+const LOCAL_WEIGHT = 10000;
+const MIN_METHOD_VOTES = 20000; // votes compared before a vote type's own swing is used for its uncounted votes // votes of a district's own reporting before its local swing outweighs the statewide one
 const DEFAULT_TURNOUT = 0.8; // 2026 votes per 2024 vote before any results exist (a midterm turns out less)
 
 const share = (d, r) => (d + r > 0 ? d / (d + r) : null);
 const methodOf = (key) => key.split("|")[2];
 const round1 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10) / 10);
 
-// Average swing and turnout across units counted in 2026 that can be compared with the same
-// unit in an earlier year. Only units where both years had a Democrat and a Republican count
-// toward swing. Returns overall and per-method numbers.
-function compare(live, base, year) {
-  const bkey = year === 2022 ? "b22" : "b24";
+// Average swing and turnout against 2024 across units counted so far, matched by place and vote
+// type. Only units where both years had a Democrat and a Republican count toward swing.
+function compare(live, base) {
   const acc = { all: blank() };
   METHODS.forEach((m) => (acc[m] = blank()));
   for (const [key, u] of Object.entries(live.units)) {
-    const tot = u.d + u.r + (u.o || 0);
-    if (tot <= 0) continue;
+    if (u.d + u.r + (u.o || 0) <= 0) continue;
     const b = base.units[key];
-    if (!b || !b[bkey]) continue;
-    const [bd, br] = b[bkey];
-    const s0 = share(bd, br), s1 = share(u.d, u.r);
+    if (!b || !b.b24) continue;
+    const [bd, br] = b.b24;
     const m = methodOf(key);
     for (const a of [acc.all, acc[m]]) {
       a.turnNow += u.d + u.r;
       a.turnThen += bd + br;
-      if (s0 != null && s1 != null && u.d > 0 && u.r > 0 && bd > 0 && br > 0 && (year === 2022 || b.leg24)) {
+      if (b.leg24 && u.d > 0 && u.r > 0 && bd > 0 && br > 0) {
         a.w += u.d + u.r;
-        a.sw += (u.d + u.r) * (s1 - s0) * 200;
-      }
-    }
-  }
-  // 2022 pooled votes: compare county by county, since the 2022 districts were different.
-  if (year === 2022 && base.pool22) {
-    const pools = {};
-    for (const [key, u] of Object.entries(live.units)) {
-      const [county, precinct, method] = key.split("|");
-      if (precinct !== "~" || !(u.d > 0 && u.r > 0)) continue;
-      const k = `${county}|${method}|${u.dist[0]}`;
-      const p = (pools[k] ||= [0, 0]);
-      p[0] += u.d; p[1] += u.r;
-    }
-    for (const [k, [d, r]] of Object.entries(pools)) {
-      const b = base.pool22[k];
-      if (!b || !(b[0] > 0 && b[1] > 0)) continue;
-      const m = k.split("|")[1];
-      for (const a of [acc.all, acc[m]]) {
-        a.turnNow += d + r; a.turnThen += b[0] + b[1];
-        a.w += d + r; a.sw += (d + r) * (share(d, r) - share(b[0], b[1])) * 200;
+        a.sw += (u.d + u.r) * (share(u.d, u.r) - share(bd, br)) * 200;
       }
     }
   }
@@ -76,6 +53,34 @@ function compare(live, base, year) {
   METHODS.forEach((m) => (out[m] = fin(acc[m])));
   return out;
   function blank() { return { w: 0, sw: 0, turnNow: 0, turnThen: 0 }; }
+}
+
+// Against 2022: whole counties that have finished counting (every Election Day precinct that had
+// votes in 2024 now has votes, and early votes are in), all vote types together.
+function compare22(live, base) {
+  if (!base.county22) return { swing: null, counties: 0, turnout: null };
+  const c = {};
+  for (const [key, u] of Object.entries(live.units)) {
+    const [county, precinct, method] = key.split("|");
+    const x = (c[county] ||= { done: true, early: 0, sums: {} });
+    const tot = u.d + u.r + (u.o || 0);
+    const b = base.units[key];
+    if (method === "ED" && precinct !== "~" && b && b.b24[0] + b.b24[1] >= 25 && tot === 0) x.done = false;
+    if (method === "EV") x.early += tot;
+    if (u.d > 0 && u.r > 0) { const s = (x.sums[u.dist[0]] ||= [0, 0]); s[0] += u.d; s[1] += u.r; }
+  }
+  let w = 0, sw = 0, now = 0, then = 0, n = 0;
+  for (const [county, x] of Object.entries(c)) {
+    if (!x.done || x.early === 0) continue;
+    n++;
+    for (const [ch, [d, r]] of Object.entries(x.sums)) {
+      const b = base.county22[`${county}|${ch}`];
+      if (!b || !(b[0] > 0 && b[1] > 0)) continue;
+      w += d + r; sw += (d + r) * (share(d, r) - share(b[0], b[1])) * 200;
+      now += d + r; then += b[0] + b[1];
+    }
+  }
+  return { swing: w ? sw / w : null, counties: n, turnout: then ? now / then : null };
 }
 
 // Index live and baseline units by district once, so projections can be rerun quickly.
@@ -95,7 +100,8 @@ function prepare(live, base) {
 }
 
 // Project every district at a statewide swing S (points). cmp = compare(live, base, 2024).
-function projectAll(live, base, prep, S, cmp) {
+// `extra` moves only the votes still out, for the low/high range.
+function projectAll(live, base, prep, S, cmp, extra = 0) {
   const out = {};
   for (const [id, info] of Object.entries(base.districts)) {
     const ld = live.districts[id] || { parties: [] };
@@ -111,10 +117,13 @@ function projectAll(live, base, prep, S, cmp) {
       lw += u.d + u.r;
       ls += (u.d + u.r) * (share(u.d, u.r) - share(b.b24[0], b.b24[1])) * 200;
     }
-    const localS = lw ? (ls + LOCAL_WEIGHT * S) / (lw + LOCAL_WEIGHT) : S;
     let remD = 0, remR = 0;
     for (const { key, b } of p.waiting) {
-      const t = (cmp[methodOf(key)] && cmp[methodOf(key)].turnout) || (cmp.all && cmp.all.turnout) || DEFAULT_TURNOUT;
+      const cm = cmp[methodOf(key)];
+      // Each vote type's own swing once it has enough votes behind it; the overall swing until then.
+      const Sm = cm && cm.votes >= MIN_METHOD_VOTES ? cm.swing : S;
+      const localS = (lw ? (ls + LOCAL_WEIGHT * Sm) / (lw + LOCAL_WEIGHT) : Sm) + extra;
+      const t = (cm && cm.turnout) || (cmp.all && cmp.all.turnout) || DEFAULT_TURNOUT;
       const votes = (b.b24[0] + b.b24[1]) * t;
       const s = clamp(share(b.b24[0], b.b24[1]) + localS / 200, 0, 1);
       remD += votes * s;
@@ -186,8 +195,8 @@ function swingFor(base, live, ch, test) {
 
 // Everything the page shows, in one object.
 function summarize(live, base, opts = {}) {
-  const cmp24 = compare(live, base, 2024);
-  const cmp22 = compare(live, base, 2022);
+  const cmp24 = compare(live, base);
+  const cmp22 = compare22(live, base);
   const S = cmp24.all.swing ?? 0;
   const prep = prepare(live, base);
   const proj = projectAll(live, base, prep, S, cmp24);
@@ -202,8 +211,8 @@ function summarize(live, base, opts = {}) {
   for (const ch of ["H", "S"]) {
     const c = CHAMBERS[ch];
     const t = tally(proj, ch);
-    const lo = tally(projectAll(live, base, prep, S - sigma, cmp24), ch);
-    const hi = tally(projectAll(live, base, prep, S + sigma, cmp24), ch);
+    const lo = tally(projectAll(live, base, prep, S, cmp24, -sigma), ch);
+    const hi = tally(projectAll(live, base, prep, S, cmp24, sigma), ch);
     const held = Object.values(base.districts).filter((d) => d.ch === ch);
     const held24 = { D: held.filter((d) => d.held === "D").length, R: held.filter((d) => d.held === "R").length };
     const flipNeed = swingFor(base, live, ch, (x) => x.D >= c.demControl);
@@ -229,14 +238,9 @@ function summarize(live, base, opts = {}) {
     updated: live.updated || null,
     source: live.source || null,
     pctIn: Math.round(frac * 1000) / 10,
-    swing: { vs2024: round1(cmp24.all.swing), vs2022: round1(cmp22.all.swing), sigma: round1(sigma) },
-    byMethod: METHODS.map((m) => ({
-      method: m,
-      vs2024: round1(cmp24[m].swing), vs2022: round1(cmp22[m].swing),
-      turnout24: cmp24[m].turnout, turnout22: cmp22[m].turnout,
-      votes: cmp24[m].votes,
-    })),
-    turnout: { vs2024: cmp24.all.turnout, vs2022: cmp22.all.turnout },
+    swing: { vs2024: round1(cmp24.all.swing), vs2022: round1(cmp22.swing), counties22: cmp22.counties, sigma: round1(sigma) },
+    byMethod: METHODS.map((m) => ({ method: m, vs2024: round1(cmp24[m].swing), turnout24: cmp24[m].turnout, votes: cmp24[m].votes })),
+    turnout: { vs2024: cmp24.all.turnout, vs2022: cmp22.turnout },
     chambers,
   };
 }
@@ -260,4 +264,4 @@ function verdict(ch, t, lo, hi, c, frac) {
   return { tone: "close", text: `Too close — Democrats ${t.D - need + 1 > 1 ? (t.D - need + 1) + " seats" : "1 seat"} over the line` };
 }
 
-module.exports = { CHAMBERS, METHODS, compare, prepare, projectAll, tally, summarize, share };
+module.exports = { CHAMBERS, METHODS, compare, compare22, prepare, projectAll, tally, summarize, share };
