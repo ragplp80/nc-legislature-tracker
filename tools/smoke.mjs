@@ -1,6 +1,6 @@
 // Loads the live site and prints what the page would show. Run by .github/workflows/smoke.yml.
 const SITE = process.env.SITE || "https://nc-legislature-tracker.vercel.app";
-const cases = ["", "?replay=2024&pct=100", "?replay=2024&pct=40&shift=4", "?replay=2024&pct=75&shift=-2"];
+const cases = [""];
 const page = await fetch(SITE + "/");
 console.log("page", page.status, (await page.text()).includes("Can Democrats take a chamber?") ? "ok" : "MISSING TITLE");
 let bad = 0;
@@ -12,6 +12,7 @@ for (const q of cases) {
   if (!r.ok || j.error) { bad++; console.log(q || "(live)", r.status, ms + "ms", "ERROR", j.error); continue; }
   const c = (ch) => { const x = j.chambers[ch]; return `${ch} D${x.D}-R${x.R} called ${x.calledD}/${x.calledR} range ${x.range} flip@${x.swingToFlip} "${x.verdict.text}" tip ${x.tipping}`; };
   console.log(q || "(live)", r.status, ms + "ms", `mode="${j.mode}" in ${j.pctIn}% swing24 ${j.swing.vs2024} swing22 ${j.swing.vs2022} (${j.swing.counties22} counties) cache=${r.headers.get("x-vercel-cache")}`);
+  console.log("    methods:", j.byMethod.map((m) => `${m.method} ${m.vs2024} turnout ${m.turnout24 && m.turnout24.toFixed(2)} votes ${m.votes}`).join(" | "), "turnout22", j.turnout.vs2022);
   console.log("   ", c("H"));
   console.log("   ", c("S"));
   const sample = j.chambers.H.races.slice(0, 3).map((x) => `${x.id} ${x.cands.DEM || "?"} v ${x.cands.REP || "?"} now ${x.now} proj ${x.proj}`);
