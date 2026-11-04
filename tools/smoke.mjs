@@ -25,4 +25,17 @@ console.log("zip", zip.status, "last-modified", zip.headers.get("last-modified")
 const er = await fetch("https://er.ncsbe.gov/enr/20261103/data/results_0.txt").then((r) => r.json()).catch(() => []);
 const sen = er.filter((x) => /^US SENATE/.test(x.cnm));
 console.log("dashboard US Senate:", sen.map((x) => `${x.bnm} ${x.vct} (ev ${x.evc}, mail ${x.avc}, ed ${x.ovc})`).join(" | "), "precincts", sen[0] && `${sen[0].prt}/${sen[0].ptl}`);
+// Where does the dashboard load its data tonight?
+try {
+  const home = await (await fetch("https://er.ncsbe.gov/")).text();
+  const refs = [...new Set([...home.matchAll(/(?:src|href)="([^"]+\.(?:js|txt|json)[^"]*)"/g)].map((m) => m[1]))].slice(0, 12);
+  console.log("dashboard assets:", refs.join(" "));
+  const elect = await fetch("https://er.ncsbe.gov/enr/elections.txt").then((r) => r.text()).catch(() => "");
+  console.log("elections list:", elect.slice(0, 400).replace(/\s+/g, " "));
+  for (const f of ["results_0.txt", "results_92.txt", "county.txt", "lastupdated.txt", "precincts.txt"]) {
+    const r = await fetch("https://er.ncsbe.gov/enr/20261103/data/" + f);
+    const t = await r.text();
+    console.log("data", f, r.status, r.headers.get("last-modified"), t.length, t.slice(0, 160).replace(/\s+/g, " "));
+  }
+} catch (e) { console.log("dashboard probe error", e.message); }
 if (bad) process.exit(1);
