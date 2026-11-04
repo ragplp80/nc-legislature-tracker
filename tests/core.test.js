@@ -81,3 +81,23 @@ test("2022 comparison and turnout are reported", () => {
   assert.equal(part.swing.counties22, 0);
   assert.equal(part.swing.vs2022, null);
 });
+
+test("early-vote swing does not leak into Election Day votes still out", () => {
+  // Early votes swing D+20 but Election Day swings R+5 (voters moved between methods).
+  const live = makeLive(base, { swing: 0 });
+  for (const [k, u] of Object.entries(live.units)) {
+    const b = base.units[k], tot = b.b24[0] + b.b24[1], s0 = b.b24[0] / tot;
+    const sw = k.includes("|EV|") ? 20 : k.includes("|ED|") ? -5 : 0;
+    const on = !k.includes("|ED|") || /-P[0-2]\|/.test(k); // all early votes, 3 of 10 ED precincts
+    const d = Math.round(tot * Math.min(1, Math.max(0, s0 + sw / 200)));
+    u.d = on ? d : 0; u.r = on ? tot - d : 0;
+  }
+  const full = makeLive(base, { swing: 0 });
+  for (const [k, u] of Object.entries(full.units)) {
+    const b = base.units[k], tot = b.b24[0] + b.b24[1], s0 = b.b24[0] / tot;
+    const sw = k.includes("|EV|") ? 20 : k.includes("|ED|") ? -5 : 0;
+    u.d = Math.round(tot * Math.min(1, Math.max(0, s0 + sw / 200))); u.r = tot - u.d;
+  }
+  const part = Core.summarize(live, base), done = Core.summarize(full, base);
+  assert.ok(Math.abs(part.chambers.H.D - done.chambers.H.D) <= 2, `partial ${part.chambers.H.D} vs final ${done.chambers.H.D}`);
+});

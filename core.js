@@ -110,19 +110,25 @@ function projectAll(live, base, prep, S, cmp, extra = 0) {
     let D = 0, R = 0, O = 0, counted = 0;
     for (const { u } of p.counted) { D += u.d; R += u.r; O += u.o || 0; }
     counted = D + R;
-    // Local swing: what this district's own counted units show against 2024, blended with S.
+    // Local swing: what this district's own counted units show against 2024, kept separate by
+    // vote type. Voters move between early and Election Day voting from one election to the next,
+    // so an early-vote swing says little about the Election Day votes still to come.
     let lw = 0, ls = 0;
-    for (const { u, b } of p.counted) {
+    const lwm = {}, lsm = {};
+    for (const { key, u, b } of p.counted) {
       if (!b || !b.b24 || !b.leg24 || !(u.d > 0 && u.r > 0)) continue;
-      lw += u.d + u.r;
-      ls += (u.d + u.r) * (share(u.d, u.r) - share(b.b24[0], b.b24[1])) * 200;
+      const w = u.d + u.r, sw = w * (share(u.d, u.r) - share(b.b24[0], b.b24[1])) * 200;
+      const m = methodOf(key);
+      lw += w; ls += sw;
+      lwm[m] = (lwm[m] || 0) + w; lsm[m] = (lsm[m] || 0) + sw;
     }
     let remD = 0, remR = 0;
     for (const { key, b } of p.waiting) {
       const cm = cmp[methodOf(key)];
       // Each vote type's own swing once it has enough votes behind it; the overall swing until then.
+      const m = methodOf(key);
       const Sm = cm && cm.votes >= MIN_METHOD_VOTES ? cm.swing : S;
-      const localS = (lw ? (ls + LOCAL_WEIGHT * Sm) / (lw + LOCAL_WEIGHT) : Sm) + extra;
+      const localS = (lwm[m] ? (lsm[m] + LOCAL_WEIGHT * Sm) / (lwm[m] + LOCAL_WEIGHT) : Sm) + extra;
       const t = (cm && cm.turnout) || (cmp.all && cmp.all.turnout) || DEFAULT_TURNOUT;
       const votes = (b.b24[0] + b.b24[1]) * t;
       const s = clamp(share(b.b24[0], b.b24[1]) + localS / 200, 0, 1);
@@ -205,7 +211,9 @@ function summarize(live, base, opts = {}) {
   let cnt = 0, exp = 0;
   for (const p of Object.values(proj)) if (p.ch === "H") { cnt += p.counted; exp += p.expected; }
   const frac = exp > 0 ? cnt / exp : 0;
-  const sigma = 1 + 5 * (1 - frac); // uncertainty in the statewide swing, shrinking as votes come in
+  // Uncertainty in the swing of votes still out: shrinks as votes come in, and stays wide until
+  // Election Day votes are being counted (early-vote swing doesn't carry over to them).
+  const sigma = 1 + 5 * (1 - frac) + (cmp24.ED.votes < MIN_METHOD_VOTES ? 6 : cmp24.ED.votes < 200000 ? 2 : 0);
 
   const chambers = {};
   for (const ch of ["H", "S"]) {
