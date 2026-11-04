@@ -17,4 +17,12 @@ for (const q of cases) {
   const sample = j.chambers.H.races.slice(0, 3).map((x) => `${x.id} ${x.cands.DEM || "?"} v ${x.cands.REP || "?"} now ${x.now} proj ${x.proj}`);
   console.log("    races:", sample.join(" | "));
 }
+
+
+// Is the download file keeping up with the State Board's live dashboard?
+const zip = await fetch("https://s3.amazonaws.com/dl.ncsbe.gov/ENRS/2026_11_03/results_pct_20261103.zip", { method: "HEAD" });
+console.log("zip", zip.status, "last-modified", zip.headers.get("last-modified"), "size", zip.headers.get("content-length"));
+const er = await fetch("https://er.ncsbe.gov/enr/20261103/data/results_0.txt").then((r) => r.json()).catch(() => []);
+const sen = er.filter((x) => /^US SENATE/.test(x.cnm));
+console.log("dashboard US Senate:", sen.map((x) => `${x.bnm} ${x.vct} (ev ${x.evc}, mail ${x.avc}, ed ${x.ovc})`).join(" | "), "precincts", sen[0] && `${sen[0].prt}/${sen[0].ptl}`);
 if (bad) process.exit(1);
