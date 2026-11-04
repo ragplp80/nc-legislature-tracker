@@ -137,7 +137,8 @@ async function load() {
     const r = await fetch(api, { cache: "no-store" });
     const j = await r.json();
     if (!r.ok || j.error) throw new Error(j.error || "HTTP " + r.status);
-    data = j; render(); $("mode").hidden = !j.mode; $("mode").className = "badge"; $("mode").textContent = j.mode || "";
+    data = j; render(); $("mode").hidden = !j.mode; $("mode").className = "badge";
+    $("mode").innerHTML = esc(j.mode || "") + (/REHEARSAL/.test(j.mode || "") ? ' · <a href="/" style="color:inherit;text-decoration:underline">Go live</a>' : "");
   } catch (e) {
     $("mode").hidden = false; $("mode").className = "badge err"; $("mode").textContent = "Couldn't update — retrying";
     console.error(e);
